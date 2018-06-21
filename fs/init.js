@@ -11,11 +11,12 @@ let led = Cfg.get('pins.led');
 let button = Cfg.get('pins.button');
 let buttonTopic = '/devices/' + Cfg.get('device.id') + '/events/button';
 
-let lightButton = 12;
-let lightEnabled = false;
+let lightButton = 5;
+let lightEnabled = true;
 let lightTopic = '/devices/' + Cfg.get('device.id') + '/events/light';
 
 let tempButton = 15;
+let tempEnabled = false;
 let tempTopic = '/devices/' + Cfg.get('device.id') + '/events/temp';
 let humidityTopic = '/devices/' + Cfg.get('device.id') + '/events/humidity';
 
@@ -54,24 +55,26 @@ GPIO.set_button_handler(lightButton, GPIO.PULL_UP, GPIO.INT_EDGE_NEG, 200, funct
 let dht = DHT.create(tempButton, DHT.DHT22);
 // This function reads data from the DHT sensor every 5 seconds
 Timer.set(5000 /* milliseconds */, Timer.REPEAT, function () {
-    let t = dht.getTemp();
-    let h = dht.getHumidity();
+    if (tempEnabled) {
+        let t = dht.getTemp();
+        let h = dht.getHumidity();
 
-    if (isNaN(h) || isNaN(t)) {
-        print('Failed to read data from temp sensor');
-        return;
+        if (isNaN(h) || isNaN(t)) {
+            print('Failed to read data from temp sensor');
+            return;
+        }
+
+        print('Temperature:', t, '*C');
+        print('Humidity:', h, '%');
+        let tempMessage = JSON.stringify({temp: t});
+        let humMessage = JSON.stringify({humidity: h});
+
+        let tok = MQTT.pub(tempTopic, tempMessage);
+        print('TEMP Published:', tok, tempTopic, '->', tempMessage);
+
+        let hok = MQTT.pub(humidityTopic, humMessage);
+        print('HUMIDITY Published:', hok, humidityTopic, '->', humMessage);
     }
-
-    print('Temperature:', t, '*C');
-    print('Humidity:', h, '%');
-    let tempMessage = JSON.stringify({temp: t});
-    let humMessage = JSON.stringify({humidity: h});
-
-    let tok = MQTT.pub(tempTopic, tempMessage);
-    print('TEMP Published:', tok, tempTopic, '->', tempMessage);
-
-    let hok = MQTT.pub(humidityTopic, humMessage);
-    print('HUMIDITY Published:', hok, humidityTopic, '->', humMessage);
 
 }, null);
 
